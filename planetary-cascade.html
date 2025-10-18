@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planetary Cascade Network</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #000000;
+            color: #ffffff;
+            overflow: hidden;
+        }
+        
+        #container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+        
+        #header {
+            position: absolute;
+            top: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            z-index: 100;
+            pointer-events: none;
+        }
+        
+        h1 {
+            font-size: 48px;
+            font-weight: 900;
+            background: linear-gradient(135deg, #00d4ff, #0066ff, #9333ea);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -1px;
+            margin-bottom: 8px;
+        }
+        
+        .subtitle {
+            font-size: 16px;
+            color: #64748b;
+            font-weight: 300;
+        }
+        
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+        }
+        
+        canvas {
+            display: block;
+        }
+        
+        #controls {
+            position: absolute;
+            top: 120px;
+            right: 30px;
+            width: 320px;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-height: calc(100vh - 160px);
+            overflow-y: auto;
+        }
+        
+        .control-section {
+            margin-bottom: 24px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .control-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        
+        .control-section h3 {
+            color: #0ea5e9;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 16px;
+        }
+        
+        .stressor-btn {
+            width: 100%;
+            padding: 12px;
+            background: rgba(100, 116, 139, 0.2);
+            border: 1px solid rgba(100, 116, 139, 0.3);
+            border-radius: 8px;
+            color: #cbd5e1;
+            cursor: pointer;
+            margin-bottom: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.3s;
+            text-align: left;
+        }
+        
+        .stressor-btn:hover {
+            background: rgba(100, 116, 139, 0.3);
+            border-color: #ef4444;
+        }
+        
+        .stressor-btn.active {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(220, 38, 38, 0.3));
+            border-color: #ef4444;
+            color: #fca5a5;
+        }
+        
+        .scenario-btn {
+            width: 100%;
+            padding: 12px;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 8px;
+            color: #93c5fd;
+            cursor: pointer;
+            margin-bottom: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.3s;
+            text-align: left;
+        }
+        
+        .scenario-btn:hover {
+            background: rgba(59, 130, 246, 0.2);
+            border-color: #3b82f6;
+        }
+        
+        .scenario-btn.active {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(37, 99, 235, 0.3));
+            border-color: #3b82f6;
+            color: #60a5fa;
+        }
+        
+        .reset-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 700;
+            transition: all 0.3s;
+        }
+        
+        .reset-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4);
+        }
+        
+        #stats {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+        }
+        
+        .stat-card {
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(20px);
+            padding: 16px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            min-width: 140px;
+        }
+        
+        .stat-value {
+            font-size: 32px;
+            font-weight: 900;
+            background: linear-gradient(135deg, #00d4ff, #0066ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            line-height: 1;
+            margin-bottom: 6px;
+        }
+        
+        .stat-value.warning {
+            background: linear-gradient(135deg, #f59e0b, #ef4444);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .stat-label {
+            font-size: 11px;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+        
+        #info-panel {
+            position: absolute;
+            top: 120px;
+            left: 30px;
+            width: 380px;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: none;
+        }
+        
+        #info-panel.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        #info-panel h2 {
+            color: #fff;
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        
+        #info-panel .system-type {
+            display: inline-block;
+            padding: 4px 12px;
+            background: rgba(59, 130, 246, 0.2);
+            border-radius: 12px;
+            font-size: 11px;
+            color: #60a5fa;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            margin-bottom: 16px;
+        }
+        
+        #info-panel .critical-badge {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+        }
+        
+        #info-panel p {
+            color: #cbd5e1;
+            font-size: 14px;
+            line-height: 1.7;
+            margin-bottom: 20px;
+        }
+        
+        #info-panel h4 {
+            color: #0ea5e9;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+            font-weight: 700;
+        }
+        
+        .connection-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .connection-list li {
+            padding: 10px;
+            background: rgba(100, 116, 139, 0.1);
+            border-left: 3px solid #3b82f6;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            font-size: 13px;
+            color: #cbd5e1;
+        }
+        
+        .connection-list li.critical {
+            border-left-color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="header">
+            <h1>🌍 Planetary Cascade Network</h1>
+            <p class="subtitle">Non-Anthropocentric Systemic Risk Visualization</p>
+        </div>
+        
+        <div id="canvas-container">
+            <canvas id="network-canvas"></canvas>
+        </div>
+        
+        <div id="controls">
+            <div class="control-section">
+                <h3>⚠️ Active Stressors</h3>
+                <button class="stressor-btn" data-stressor="warming" onclick="toggleStressor('warming')">
+                    🔥 +2.5°C Warming
+                </button>
+                <button class="stressor-btn" data-stressor="fishing" onclick="toggleStressor('fishing')">
+                    🎣 Industrial Overfishing
+                </button>
+                <button class="stressor-btn" data-stressor="deforestation" onclick="toggleStressor('deforestation')">
+                    🪓 Deforestation
+                </button>
+                <button class="stressor-btn" data-stressor="pollution" onclick="toggleStressor('pollution')">
+                    🏭 Ocean Acidification
+                </button>
+                <button class="stressor-btn" data-stressor="agriculture" onclick="toggleStressor('agriculture')">
+                    🚜 Agricultural Expansion
+                </button>
+            </div>
+            
+            <div class="control-section">
+                <h3>🌡️ Scenario Presets</h3>
+                <button class="scenario-btn active" onclick="loadScenario('pristine')">
+                    🌿 Pre-Industrial (1850)
+                </button>
+                <button class="scenario-btn" onclick="loadScenario('current')">
+                    📍 Current State (2024)
+                </button>
+                <button class="scenario-btn" onclick="loadScenario('1.5C')">
+                    ⚠️ 1.5°C Pathway (2050)
+                </button>
+                <button class="scenario-btn" onclick="loadScenario('3C')">
+                    🚨 3°C+ Collapse (2100)
+                </button>
+            </div>
+            
+            <div class="control-section">
+                <button class="reset-btn" onclick="resetAll()">↻ Reset All Systems</button>
+            </div>
+        </div>
+        
+        <div id="stats">
+            <div class="stat-card">
+                <div class="stat-value" id="systems-intact">19</div>
+                <div class="stat-label">Systems Intact</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value warning" id="systems-collapsed">0</div>
+                <div class="stat-label">Systems Collapsed</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="cascade-strength">0%</div>
+                <div class="stat-label">Cascade Risk</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value warning" id="tipping-points">0</div>
+                <div class="stat-label">Tipping Points</div>
+            </div>
+        </div>
+        
+        <div id="info-panel">
+            <h2 id="info-name"></h2>
+            <span id="info-type" class="system-type"></span>
+            <p id="info-description"></p>
+            <h4>Cascade Connections</h4>
+            <ul id="info-connections" class="connection-list"></ul>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('network-canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Set canvas size
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        
+        // Earth Systems Data
+        const systems = [
+            // Ocean
+            { id: 'amoc', name: 'Atlantic Circulation', type: 'ocean', x: 250, y: 350, critical: true, description: 'AMOC collapse would dramatically alter Northern Hemisphere climate patterns' },
+            { id: 'coral', name: 'Coral Reef Systems', type: 'ocean', x: 700, y: 450, critical: true, description: 'Coral reefs support 25% of marine biodiversity despite covering <1% of ocean' },
+            { id: 'fisheries', name: 'Marine Fisheries', type: 'ocean', x: 600, y: 550, description: 'Critical protein source for 3 billion people' },
+            { id: 'oxygen', name: 'Ocean Oxygen Zones', type: 'ocean', x: 400, y: 500, description: 'Expanding dead zones threaten marine life' },
+            
+            // Ice
+            { id: 'greenland', name: 'Greenland Ice Sheet', type: 'ice', x: 300, y: 150, critical: true, description: '7 meters of sea level rise if fully melted' },
+            { id: 'antarctica', name: 'West Antarctic Ice', type: 'ice', x: 500, y: 700, critical: true, description: '3+ meters sea level rise potential' },
+            { id: 'arctic', name: 'Arctic Sea Ice', type: 'ice', x: 400, y: 200, description: 'Albedo feedback accelerates warming' },
+            { id: 'permafrost', name: 'Permafrost Carbon', type: 'ice', x: 550, y: 180, critical: true, description: '1.5 trillion tons of carbon at risk' },
+            
+            // Terrestrial
+            { id: 'amazon', name: 'Amazon Rainforest', type: 'terrestrial', x: 200, y: 500, critical: true, description: 'Approaching savannization tipping point' },
+            { id: 'boreal', name: 'Boreal Forests', type: 'terrestrial', x: 350, y: 250, description: 'Largest terrestrial carbon sink' },
+            { id: 'soil', name: 'Soil Carbon Stores', type: 'terrestrial', x: 300, y: 400, description: 'Holds 3x more carbon than atmosphere' },
+            { id: 'wetlands', name: 'Wetland Systems', type: 'terrestrial', x: 500, y: 400, description: 'Critical methane regulation' },
+            
+            // Atmospheric
+            { id: 'monsoon', name: 'Indian Monsoon', type: 'atmospheric', x: 800, y: 350, description: 'Feeds 1 billion people' },
+            { id: 'jet', name: 'Jet Stream', type: 'atmospheric', x: 600, y: 200, description: 'Governs Northern Hemisphere weather' },
+            { id: 'enso', name: 'ENSO System', type: 'atmospheric', x: 750, y: 550, description: 'Global climate regulator' },
+            
+            // Food
+            { id: 'breadbasket', name: 'Global Breadbaskets', type: 'food', x: 550, y: 300, description: 'Major grain-producing regions' },
+            { id: 'pollinators', name: 'Pollinator Networks', type: 'food', x: 400, y: 350, description: '75% of crops depend on pollination' },
+            
+            // Human (peripheral)
+            { id: 'coastal', name: 'Coastal Megacities', type: 'human', x: 650, y: 650, description: '40% of humanity lives near coasts' },
+            { id: 'migration', name: 'Climate Migration', type: 'human', x: 800, y: 600, description: 'Projected 1+ billion climate migrants by 2050' }
+        ];
+        
+        const links = [
+            { source: 'greenland', target: 'amoc', strength: 'critical' },
+            { source: 'amoc', target: 'jet', strength: 'critical' },
+            { source: 'amoc', target: 'monsoon', strength: 'strong' },
+            { source: 'arctic', target: 'jet', strength: 'strong' },
+            { source: 'permafrost', target: 'boreal', strength: 'critical' },
+            { source: 'permafrost', target: 'arctic', strength: 'medium' },
+            { source: 'amazon', target: 'monsoon', strength: 'strong' },
+            { source: 'amazon', target: 'soil', strength: 'strong' },
+            { source: 'coral', target: 'fisheries', strength: 'critical' },
+            { source: 'oxygen', target: 'fisheries', strength: 'strong' },
+            { source: 'fisheries', target: 'coastal', strength: 'strong' },
+            { source: 'jet', target: 'breadbasket', strength: 'critical' },
+            { source: 'monsoon', target: 'breadbasket', strength: 'critical' },
+            { source: 'breadbasket', target: 'migration', strength: 'strong' },
+            { source: 'pollinators', target: 'breadbasket', strength: 'strong' },
+            { source: 'antarctica', target: 'coastal', strength: 'critical' },
+            { source: 'greenland', target: 'coastal', strength: 'critical' },
+            { source: 'coastal', target: 'migration', strength: 'strong' },
+            { source: 'boreal', target: 'permafrost', strength: 'medium' },
+            { source: 'wetlands', target: 'soil', strength: 'medium' },
+            { source: 'enso', target: 'monsoon', strength: 'strong' },
+            { source: 'enso', target: 'breadbasket', strength: 'medium' }
+        ];
+        
+        // State
+        let collapsedSystems = new Set();
+        let activeStressors = new Set();
+        let hoveredSystem = null;
+        let selectedSystem = null;
+        
+        // Colors
+        const colors = {
+            ocean: '#0ea5e9',
+            ice: '#38bdf8',
+            terrestrial: '#22c55e',
+            atmospheric: '#a78bfa',
+            food: '#f59e0b',
+            human: '#ef4444'
+        };
+        
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw links
+            links.forEach(link => {
+                const source = systems.find(s => s.id === link.source);
+                const target = systems.find(s => s.id === link.target);
+                
+                const sourceFailed = collapsedSystems.has(link.source);
+                const targetFailed = collapsedSystems.has(link.target);
+                const broken = sourceFailed || targetFailed;
+                
+                ctx.beginPath();
+                ctx.moveTo(source.x, source.y);
+                ctx.lineTo(target.x, target.y);
+                
+                if (broken) {
+                    ctx.strokeStyle = 'rgba(239, 68, 68, 0.6)';
+                    ctx.lineWidth = 3;
+                    ctx.setLineDash([10, 5]);
+                } else {
+                    const alpha = link.strength === 'critical' ? 0.4 : 0.2;
+                    ctx.strokeStyle = `rgba(148, 163, 184, ${alpha})`;
+                    ctx.lineWidth = link.strength === 'critical' ? 2 : 1;
+                    ctx.setLineDash([]);
+                }
+                
+                ctx.stroke();
+                ctx.setLineDash([]);
+            });
+            
+            // Draw nodes
+            systems.forEach(system => {
+                const collapsed = collapsedSystems.has(system.id);
+                const hovered = hoveredSystem === system.id;
+                const selected = selectedSystem === system.id;
+                
+                // Glow
+                if (!collapsed && (hovered || selected)) {
+                    const gradient = ctx.createRadialGradient(
+                        system.x, system.y, 0,
+                        system.x, system.y, 40
+                    );
+                    gradient.addColorStop(0, colors[system.type] + '60');
+                    gradient.addColorStop(1, colors[system.type] + '00');
+                    ctx.fillStyle = gradient;
+                    ctx.beginPath();
+                    ctx.arc(system.x, system.y, 40, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                // Node
+                ctx.beginPath();
+                ctx.arc(system.x, system.y, collapsed ? 15 : 20, 0, Math.PI * 2);
+                ctx.fillStyle = collapsed ? '#1e293b' : colors[system.type];
+                ctx.globalAlpha = collapsed ? 0.3 : 1;
+                ctx.fill();
+                ctx.globalAlpha = 1;
+                
+                // Ring
+                ctx.strokeStyle = (hovered || selected) ? '#ffffff' : 'rgba(255, 255, 255, 0.3)';
+                ctx.lineWidth = (hovered || selected) ? 3 : 1.5;
+                ctx.stroke();
+                
+                // Critical indicator
+                if (system.critical && !collapsed) {
+                    ctx.beginPath();
+                    ctx.arc(system.x + 15, system.y - 15, 6, 0, Math.PI * 2);
+                    ctx.fillStyle = '#ef4444';
+                    ctx.fill();
+                }
+                
+                // Label
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 11px Inter';
+                ctx.textAlign = 'center';
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+                ctx.shadowBlur = 6;
+                ctx.fillText(system.name, system.x, system.y + 35);
+                ctx.shadowBlur = 0;
+                
+                // X for collapsed
+                if (collapsed) {
+                    ctx.fillStyle = '#ef4444';
+                    ctx.font = 'bold 24px Inter';
+                    ctx.fillText('✕', system.x, system.y + 8);
+                }
+            });
+        }
+        
+        function calculateCascade(systemId) {
+            const affected = new Set([systemId]);
+            const queue = [systemId];
+            
+            while (queue.length > 0) {
+                const current = queue.shift();
+                
+                links.forEach(link => {
+                    if (link.source === current && !affected.has(link.target)) {
+                        if (link.strength === 'critical') {
+                            affected.add(link.target);
+                            queue.push(link.target);
+                        }
+                    }
+                });
+            }
+            
+            return affected;
+        }
+        
+        function updateStats() {
+            const intact = systems.length - collapsedSystems.size;
+            const collapsed = collapsedSystems.size;
+            const cascadeRisk = Math.round((collapsed / systems.length) * 100);
+            const tippingPoints = Array.from(collapsedSystems).filter(id => 
+                systems.find(s => s.id === id)?.critical
+            ).length;
+            
+            document.getElementById('systems-intact').textContent = intact;
+            document.getElementById('systems-collapsed').textContent = collapsed;
+            document.
