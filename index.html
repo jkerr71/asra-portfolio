@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forest Phenomenology</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: system-ui, sans-serif; background: #000; color: white; overflow: hidden; }
+        #info {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            background: rgba(0,0,0,0.8);
+            padding: 20px;
+            border-radius: 12px;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+        h1 { font-size: 32px; color: #22c55e; margin-bottom: 10px; text-shadow: 0 0 20px rgba(34, 197, 94, 0.5); }
+        #instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            backdrop-filter: blur(10px);
+        }
+        #modes {
+            position: absolute;
+            top: 120px;
+            right: 20px;
+            background: rgba(0,0,0,0.9);
+            padding: 20px;
+            border-radius: 12px;
+            width: 250px;
+            backdrop-filter: blur(10px);
+        }
+        .mode-btn {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 8px;
+            background: rgba(34, 197, 94, 0.2);
+            border: 1px solid #22c55e;
+            border-radius: 6px;
+            color: #86efac;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s;
+        }
+        .mode-btn:hover {
+            background: rgba(34, 197, 94, 0.3);
+            transform: translateX(-5px);
+        }
+        .mode-btn.active {
+            background: #22c55e;
+            color: black;
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.5);
+        }
+        #risks {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.9);
+            padding: 15px;
+            border-radius: 12px;
+            max-width: 350px;
+            border: 1px solid #ef4444;
+            backdrop-filter: blur(10px);
+        }
+        .risk-item {
+            padding: 8px;
+            background: rgba(239, 68, 68, 0.1);
+            border-left: 3px solid #ef4444;
+            margin-bottom: 6px;
+            font-size: 12px;
+            color: #fca5a5;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 1000;
+        }
+        .spinner {
+            border: 4px solid rgba(34, 197, 94, 0.3);
+            border-top: 4px solid #22c55e;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">
+        <div class="spinner"></div>
+        <p>Forest Loading...</p>
+    </div>
+
+    <div id="info" style="display:none;">
+        <h1>🌲 Forest Phenomenology</h1>
+        <p style="color: #94a3b8;">Experience non-human sensory perspectives</p>
+    </div>
+    
+    <div id="modes" style="display:none;">
+        <button class="mode-btn active" onclick="switchMode(0)">👁️ Human Vision</button>
+        <button class="mode-btn" onclick="switchMode(1)">🐝 Bee UV Vision</button>
+        <button class="mode-btn" onclick="switchMode(2)">🦇 Bat Echolocation</button>
+        <button class="mode-btn" onclick="switchMode(3)">🐍 Snake Infrared</button>
+        <button class="mode-btn" onclick="switchMode(4)">🐕 Dog Olfactory</button>
+    </div>
+    
+    <div id="risks" style="display:none;">
+        <h3 style="color: #ef4444; margin-bottom: 10px;">⚠️ Detected Risks</h3>
+        <div id="risk-list"></div>
+    </div>
+    
+    <div id="instructions" style="display:none;">Click and drag to look • WASD to move • Number keys 1-5 to switch modes</div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Wait for THREE to load
+        function init() {
+            if (typeof THREE === 'undefined') {
+                setTimeout(init, 100);
+                return;
+            }
+
+            // Hide loading screen
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('info').style.display = 'block';
+            document.getElementById('modes').style.display = 'block';
+            document.getElementById('risks').style.display = 'block';
+            document.getElementById('instructions').style.display = 'block';
+
+            // Scene setup
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.body.appendChild(renderer.domElement);
+
+            // Camera controls
+            let mouseX = 0, mouseY = 0;
+            let targetX = 0, targetY = 0;
+            let isMouseDown = false;
+            let lastMouseX = 0, lastMouseY = 0;
+            let rotationY = 0, rotationX = 0;
+
+            document.addEventListener('mousedown', (e) => {
+                isMouseDown = true;
+                lastMouseX = e.clientX;
+                lastMouseY = e.clientY;
+                document.body.style.cursor = 'grabbing';
+            });
+
+            document.addEventListener('mouseup', () => {
+                isMouseDown = false;
+                document.body.style.cursor = 'default';
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (isMouseDown) {
+                    const deltaX = e.clientX - lastMouseX;
+                    const deltaY = e.clientY - lastMouseY;
+                    
+                    rotationY += deltaX * 0.003;
+                    rotationX -= deltaY * 0.003;
+                    rotationX = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, rotationX));
+                    
+                    lastMouseX = e.clientX;
+                    lastMouseY = e.clientY;
+                }
+            });
+
+            // Keyboard movement
+            const keys = {};
+            document.addEventListener('keydown', (e) => {
+                keys[e.code] = true;
+                if (e.code === 'Digit1') switchMode(0);
+                if (e.code === 'Digit2') switchMode(1);
+                if (e.code === 'Digit3') switchMode(2);
+                if (e.code === 'Digit4') switchMode(3);
+                if (e.code === 'Digit5') switchMode(4);
+            });
+            document.addEventListener('keyup', (e) => keys[e.code] = false);
+
+            // Sensory modes
+            let currentMode = 0;
+            const modes = [
+                {
+                    name: 'Human Vision',
+                    fogColor: 0x87CEEB,
+                    fogDensity: 0.008,
+                    ambientColor: 0x404040,
+                    ambientIntensity: 0.5,
+                    risks: ['Logging equipment visible ahead', 'Trail erosion detected', 'Human litter scattered', 'Habitat fragmentation']
+                },
+                {
+                    name: 'Bee UV Vision',
+                    fogColor: 0x6a0dad,
+                    fogDensity: 0.012,
+                    ambientColor: 0x9370DB,
+                    ambientIntensity: 0.7,
+                    risks: ['Pesticide dead zones detected', 'Monoculture - no diversity', 'Missing nectar corridors', 'UV disruption from pollution']
+                },
+                {
+                    name: 'Bat Echolocation',
+                    fogColor: 0x0a0a0a,
+                    fogDensity: 0.04,
+                    ambientColor: 0x1a1a2e,
+                    ambientIntensity: 0.2,
+                    risks: ['Light pollution disrupting navigation', 'Wind turbine acoustic interference', 'Road noise masking prey sounds', 'Echo dead zones']
+                },
+                {
+                    name: 'Snake Infrared',
+                    fogColor: 0x1a0a00,
+                    fogDensity: 0.015,
+                    ambientColor: 0x2d1b00,
+                    ambientIntensity: 0.3,
+                    risks: ['Cold habitat gaps - no thermal bridges', 'Prey population decline', 'Roads creating thermal barriers', 'Dead thermal zones from development']
+                },
+                {
+                    name: 'Dog Olfactory',
+                    fogColor: 0x2d3748,
+                    fogDensity: 0.02,
+                    ambientColor: 0x4a5568,
+                    ambientIntensity: 0.4,
+                    risks: ['Vehicle exhaust masking scents', 'Agricultural chemical pollution', 'Synthetic fragrance contamination', 'Territorial scent markers destroyed']
+                }
+            ];
+
+            // Create forest ground with better texture
+            const ground = new THREE.Mesh(
+                new THREE.PlaneGeometry(400, 400, 120, 120),
+                new THREE.MeshStandardMaterial({ 
+                    color: 0x2d5016,
+                    roughness: 0.95,
+                    metalness: 0.05
+                })
+            );
+            ground.rotation.x = -Math.PI / 2;
+            ground.receiveShadow = true;
+            
+            // Add more dramatic terrain variation
+            const positions = ground.geometry.attributes.position;
+            for (let i = 0; i < positions.count; i++) {
+                const x = positions.getX(i);
+                const y = positions.getY(i);
+                const height = Math.sin(x * 0.05) * Math.cos(y * 0.05) * 2 + Math.random() * 1;
+                positions.setZ(i, height);
+            }
+            ground.geometry.computeVertexNormals();
+            scene.add(ground);
+
+            // Trees with more detail and MUCH higher density
+            const treeCanopies = [];
+            const treeTrunks = [];
+            for (let i = 0; i < 400; i++) {
+                const x = (Math.random() - 0.5) * 380;
+                const z = (Math.random() - 0.5) * 380;
+                if (Math.sqrt(x*x + z*z) < 15) continue;
+                
+                const trunkHeight = 10 + Math.random() * 12;
+                const trunkRadius = 0.4 + Math.random() * 0.3;
+                
+                // Trunk with texture
+                const trunk = new THREE.Mesh(
+                    new THREE.CylinderGeometry(trunkRadius * 0.7, trunkRadius, trunkHeight, 16),
+                    new THREE.MeshStandardMaterial({ 
+                        color: 0x3d2817,
+                        roughness: 0.98,
+                        metalness: 0
+                    })
+                );
+                trunk.position.set(x, trunkHeight / 2, z);
+                trunk.castShadow = true;
+                trunk.receiveShadow = true;
+                treeTrunks.push(trunk);
+                scene.add(trunk);
+                
+                // Multiple canopy layers for density
+                const canopySize = 3.5 + Math.random() * 3;
+                for (let j = 0; j < 3; j++) {
+                    const canopy = new THREE.Mesh(
+                        new THREE.SphereGeometry(canopySize * (1 - j * 0.2), 20, 20),
+                        new THREE.MeshStandardMaterial({ 
+                            color: j === 0 ? 0x1a5f1a : 0x228B22,
+                            roughness: 0.85,
+                            metalness: 0
+                        })
+                    );
+                    canopy.position.set(
+                        x + (Math.random() - 0.5) * 1.5,
+                        trunkHeight + 1.5 + j * 2,
+                        z + (Math.random() - 0.5) * 1.5
+                    );
+                    canopy.castShadow = true;
+                    canopy.receiveShadow = true;
+                    treeCanopies.push(canopy);
+                    scene.add(canopy);
+                }
+            }
+
+            // Understory shrubs
+            const shrubs = [];
+            for (let i = 0; i < 200; i++) {
+                const shrub = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.8 + Math.random() * 1.2, 12, 12),
+                    new THREE.MeshStandardMaterial({ 
+                        color: 0x2d6b2d,
+                        roughness: 0.9,
+                        metalness: 0
+                    })
+                );
+                shrub.position.set(
+                    (Math.random() - 0.5) * 380,
+                    0.8,
+                    (Math.random() - 0.5) * 380
+                );
+                shrub.scale.set(1, 0.7, 1);
+                shrub.castShadow = true;
+                shrub.receiveShadow = true;
+                shrubs.push(shrub);
+                scene.add(shrub);
+            }
+
+            // Fallen logs
+            const logs = [];
+            for (let i = 0; i < 30; i++) {
+                const log = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.4, 0.5, 5 + Math.random() * 3, 12),
+                    new THREE.MeshStandardMaterial({ 
+                        color: 0x5c4033,
+                        roughness: 0.95,
+                        metalness: 0
+                    })
+                );
+                log.position.set(
+                    (Math.random() - 0.5) * 350,
+                    0.3,
+                    (Math.random() - 0.5) * 350
+                );
+                log.rotation.z = Math.PI / 2;
+                log.rotation.y = Math.random() * Math.PI;
+                log.castShadow = true;
+                log.receiveShadow = true;
+                logs.push(log);
+                scene.add(log);
+            }
+
+            // Grass patches
+            const grassPatches = [];
+            for (let i = 0; i < 300; i++) {
+                const grass = new THREE.Mesh(
+                    new THREE.ConeGeometry(0.3, 1.5, 4),
+                    new THREE.MeshStandardMaterial({ 
+                        color: 0x3a7d3a,
+                        roughness: 0.9,
+                        flatShading: true
+                    })
+                );
+                grass.position.set(
+                    (Math.random() - 0.5) * 380,
+                    0.75,
+                    (Math.random() - 0.5) * 380
+                );
+                grass.rotation.y = Math.random() * Math.PI;
+                grassPatches.push(grass);
+                scene.add(grass);
+            }
+
+            // Clouds
+            const clouds = [];
+            for (let i = 0; i < 20; i++) {
+                const cloudGroup = new THREE.Group();
+                
+                // Multiple spheres to form cloud
+                for (let j = 0; j < 5; j++) {
+                    const cloudPart = new THREE.Mesh(
+                        new THREE.SphereGeometry(8 + Math.random() * 6, 12, 12),
+                        new THREE.MeshBasicMaterial({ 
+                            color: 0xffffff,
+                            transparent: true,
+                            opacity: 0.7
+                        })
+                    );
+                    cloudPart.position.set(
+                        (Math.random() - 0.5) * 15,
+                        Math.random() * 5,
+                        (Math.random() - 0.5) * 15
+                    );
+                    cloudGroup.add(cloudPart);
+                }
+                
+                cloudGroup.position.set(
+                    (Math.random() - 0.5) * 500,
+                    80 + Math.random() * 40,
+                    (Math.random() - 0.5) * 500
+                );
+                cloudGroup.userData.velocity = {
+                    x: (Math.random() - 0.5) * 0.02,
+                    z: (Math.random() - 0.5) * 0.02
+                };
+                clouds.push(cloudGroup);
+                scene.add(cloudGroup);
+            }
+
+            // Rain system
+            const raindrops = [];
+            const rainGeometry = new THREE.BufferGeometry();
+            const rainCount = 2000;
+            const rainPositions = new Float32Array(rainCount * 3);
+            
+            for (let i = 0; i < rainCount * 3; i += 3) {
+                rainPositions[i] = (Math.random() - 0.5) * 400;
+                rainPositions[i + 1] = Math.random() * 100 + 20;
+                rainPositions[i + 2] = (Math.random() - 0.5) * 400;
+            }
+            
+            rainGeometry.setAttribute('position', new THREE.BufferAttribute(rainPositions, 3));
+            
+            const rainMaterial = new THREE.PointsMaterial({
+                color: 0xaaaaaa,
+                size: 0.3,
+                transparent: true,
+                opacity: 0
+            });
+            
+            const rain = new THREE.Points(rainGeometry, rainMaterial);
+            scene.add(rain);
+            
+            // Weather state
+            let isRaining = false;
+            let rainIntensity = 0;
+            let weatherTimer = 0;
+
+            // Flowers with UV patterns
+            const flowers = [];
+            const flowerCenters = [];
+            for (let i = 0; i < 80; i++) {
+                const x = (Math.random() - 0.5) * 280;
+                const z = (Math.random() - 0.5) * 280;
+                
+                // Flower petals
+                const flower = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.4, 8, 8),
+                    new THREE.MeshStandardMaterial({ 
+                        color: 0xff69b4,
+                        emissive: 0x000000,
+                        emissiveIntensity: 0
+                    })
+                );
+                flower.position.set(x, 0.4, z);
+                flowers.push(flower);
+                scene.add(flower);
+                
+                // UV center (invisible in human mode)
+                const center = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.15, 6, 6),
+                    new THREE.MeshStandardMaterial({ 
+                        color: 0xff00ff,
+                        emissive: 0xff00ff,
+                        emissiveIntensity: 0
+                    })
+                );
+                center.position.set(x, 0.5, z);
+                flowerCenters.push(center);
+                scene.add(center);
+            }
+
+            // Rocks (echolocation targets)
+            const rocks = [];
+            for (let i = 0; i < 40; i++) {
+                const rock = new THREE.Mesh(
+                    new THREE.DodecahedronGeometry(0.8 + Math.random() * 0.5),
+                    new THREE.MeshStandardMaterial({ 
+                        color: 0x808080,
+                        roughness: 0.9,
+                        emissive: 0x000000,
+                        emissiveIntensity: 0
+                    })
+                );
+                rock.position.set((Math.random() - 0.5) * 280, 0.5, (Math.random() - 0.5) * 280);
+                rock.castShadow = true;
+                rock.receiveShadow = true;
+                rocks.push(rock);
+                scene.add(rock);
+            }
+
+            // Dead zones (pesticide areas)
+            const deadZones = [];
+            for (let i = 0; i < 5; i++) {
+                const deadZone = new THREE.Mesh(
+                    new THREE.CircleGeometry(8, 32),
+                    new THREE.MeshBasicMaterial({ 
+                        color: 0x4a3520,
+                        transparent: true,
+                        opacity: 0
+                    })
+                );
+                deadZone.rotation.x = -Math.PI / 2;
+                deadZone.position.set((Math.random() - 0.5) * 200, 0.1, (Math.random() - 0.5) * 200);
+                deadZones.push(deadZone);
+                scene.add(deadZone);
+            }
+
+            // Roads (thermal barriers)
+            const roads = [];
+            for (let i = 0; i < 2; i++) {
+                const road = new THREE.Mesh(
+                    new THREE.PlaneGeometry(300, 8),
+                    new THREE.MeshStandardMaterial({ 
+                        color: 0x3a3a3a,
+                        roughness: 0.7,
+                        emissive: 0x000000,
+                        emissiveIntensity: 0
+                    })
+                );
+                road.rotation.x = -Math.PI / 2;
+                road.rotation.z = i * Math.PI / 4;
+                road.position.y = 0.05;
+                road.receiveShadow = true;
+                roads.push(road);
+                scene.add(road);
+            }
+
+            // Logging equipment
+            const loggingEquipment = [];
+            for (let i = 0; i < 3; i++) {
+                const equipment = new THREE.Mesh(
+                    new THREE.BoxGeometry(3, 2, 5),
+                    new THREE.MeshStandardMaterial({ 
+                        color: 0xffaa00,
+                        metalness: 0.6,
+                        roughness: 0.3
+                    })
+                );
+                equipment.position.set((Math.random() - 0.5) * 100, 1, (Math.random() - 0.5) * 100);
+                equipment.castShadow = true;
+                equipment.visible = true;
+                loggingEquipment.push(equipment);
+                scene.add(equipment);
+            }
+
+            // Wind turbines (bat interference)
+            const windTurbines = [];
+            for (let i = 0; i < 2; i++) {
+                const turbineBase = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.5, 0.8, 20, 8),
+                    new THREE.MeshStandardMaterial({ 
+                        color: 0xeeeeee,
+                        metalness: 0.5,
+                        emissive: 0x000000
+                    })
+                );
+                turbineBase.position.set((Math.random() - 0.5) * 250, 10, (Math.random() - 0.5) * 250);
+                turbineBase.visible = false;
+                windTurbines.push(turbineBase);
+                scene.add(turbineBase);
+            }
+
+            // Scent particles (dog mode)
+            const scentParticles = [];
+            const particleGeometry = new THREE.SphereGeometry(0.3, 6, 6);
+            for (let i = 0; i < 200; i++) {
+                const particle = new THREE.Mesh(
+                    particleGeometry,
+                    new THREE.MeshBasicMaterial({ 
+                        color: new THREE.Color().setHSL(Math.random(), 0.7, 0.5),
+                        transparent: true,
+                        opacity: 0
+                    })
+                );
+                particle.position.set(
+                    (Math.random() - 0.5) * 280,
+                    Math.random() * 5,
+                    (Math.random() - 0.5) * 280
+                );
+                particle.userData.velocity = {
+                    x: (Math.random() - 0.5) * 0.02,
+                    y: Math.random() * 0.01 + 0.01,
+                    z: (Math.random() - 0.5) * 0.02
+                };
+                scentParticles.push(particle);
+                scene.add(particle);
+            }
+
+            // Nectar guides (bee mode - UV patterns on flowers)
+            const nectarGuides = [];
+            flowers.forEach(flower => {
+                // Create radial lines pointing to center
+                for (let j = 0; j < 6; j++) {
+                    const angle = (j / 6) * Math.PI * 2;
+                    const guide = new THREE.Mesh(
+                        new THREE.BoxGeometry(0.1, 0.02, 0.3),
+                        new THREE.MeshBasicMaterial({ 
+                            color: 0xffff00,
+                            transparent: true,
+                            opacity: 0
+                        })
+                    );
+                    guide.position.copy(flower.position);
+                    guide.position.y = flower.position.y;
+                    guide.rotation.y = angle;
+                    nectarGuides.push(guide);
+                    scene.add(guide);
+                }
+            });
+
+            // Pollen particles (bee mode - visible in air)
+            const pollenParticles = [];
+            for (let i = 0; i < 100; i++) {
+                const pollen = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.15, 6, 6),
+                    new THREE.MeshBasicMaterial({ 
+                        color: 0xffff00,
+                        transparent: true,
+                        opacity: 0
+                    })
+                );
+                pollen.position.set(
+                    (Math.random() - 0.5) * 280,
+                    Math.random() * 8 + 0.5,
+                    (Math.random() - 0.5) * 280
+                );
+                pollen.userData.drift = {
+                    x: (Math.random() - 0.5) * 0.01,
+                    y: Math.sin(Math.random() * Math.PI * 2) * 0.01,
+                    z: (Math.random() - 0.5) * 0.01
+                };
+                pollenParticles.push(pollen);
+                scene.add(pollen);
+            }
+
+            // Heat shimmer effect (snake mode - distortion overlay)
+            const heatMap = [];
+            for (let i = 0; i < 50; i++) {
+                const heat = new THREE.Mesh(
+                    new THREE.SphereGeometry(2, 8, 8),
+                    new THREE.MeshBasicMaterial({ 
+                        color: 0xff6600,
+                        transparent: true,
+                        opacity: 0,
+                        wireframe: true
+                    })
+                );
+                heat.position.set(
+                    (Math.random() - 0.5) * 280,
+                    Math.random() * 3,
+                    (Math.random() - 0.5) * 280
+                );
+                heat.userData.pulseOffset = Math.random() * Math.PI * 2;
+                heatMap.push(heat);
+                scene.add(heat);
+            }
+
+            // Cold zones (snake mode - areas without heat)
+            const coldZones = [];
+            for (let i = 0; i < 8; i++) {
+                const cold = new THREE.Mesh(
+                    new THREE.CircleGeometry(6, 32),
+                    new THREE.MeshBasicMaterial({ 
+                        color: 0x0000ff,
+                        transparent: true,
+                        opacity: 0,
+                        side: THREE.DoubleSide
+                    })
+                );
+                cold.rotation.x = -Math.PI / 2;
+                cold.position.set(
+                    (Math.random() - 0.5) * 250,
+                    0.1,
+                    (Math.random() - 0.5) * 250
+                );
+                coldZones.push(cold);
+                scene.add(cold);
+            }
+
+            // Small animals (thermal signatures)
+            const animals = [];
+            for (let i = 0; i < 10; i++) {
+                const animal = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.5, 8, 8),
+                    new THREE.MeshStandardMaterial({ 
+                        color: 0x8B4513,
+                        emissive: 0x000000,
+                        emissiveIntensity: 0
+                    })
+                );
+                animal.position.set(
+                    (Math.random() - 0.5) * 250,
+                    0.5,
+                    (Math.random() - 0.5) * 250
+                );
+                animal.userData.moveAngle = Math.random() * Math.PI * 2;
+                animals.push(animal);
+                scene.add(animal);
+            }
+
+            // Echolocation sound waves (bat mode)
+            const echoWaves = [];
+            for (let i = 0; i < 3; i++) {
+                const wave = new THREE.Mesh(
+                    new THREE.RingGeometry(0.1, 0.5, 32),
+                    new THREE.MeshBasicMaterial({ 
+                        color: 0x00ffff,
+                        transparent: true,
+                        opacity: 0,
+                        side: THREE.DoubleSide
+                    })
+                );
+                wave.userData.active = false;
+                wave.userData.scale = 0;
+                echoWaves.push(wave);
+                scene.add(wave);
+            }
+
+            // Audio setup for bat echolocation
+            let audioContext = null;
+            let batClickInterval = null;
+            
+            function playBatClick() {
+                if (!audioContext) {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                // Bat echolocation is typically 20-120 kHz, we'll simulate with audible range
+                oscillator.frequency.value = 3000 + Math.random() * 2000;
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0.15, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.05);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.05);
+            }
+            
+            function startBatSounds() {
+                if (batClickInterval) return;
+                
+                // Initialize audio on first interaction
+                if (!audioContext) {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                
+                batClickInterval = setInterval(() => {
+                    if (currentMode === 2) {
+                        playBatClick();
+                        
+                        // Trigger visual wave
+                        const inactiveWave = echoWaves.find(w => !w.userData.active);
+                        if (inactiveWave) {
+                            inactiveWave.userData.active = true;
+                            inactiveWave.userData.scale = 0;
+                            inactiveWave.position.copy(camera.position);
+                            inactiveWave.rotation.copy(camera.rotation);
+                        }
+                    }
+                }, 150); // Bat clicks roughly 6-7 times per second
+            }
+            
+            function stopBatSounds() {
+                if (batClickInterval) {
+                    clearInterval(batClickInterval);
+                    batClickInterval = null;
+                }
+            }
+
+            // Lights with better quality
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
+            directionalLight.position.set(100, 100, 50);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.camera.left = -200;
+            directionalLight.shadow.camera.right = 200;
+            directionalLight.shadow.camera.top = 200;
+            directionalLight.shadow.camera.bottom = -200;
+            directionalLight.shadow.mapSize.width = 2048;
+            directionalLight.shadow.mapSize.height = 2048;
+            scene.add(directionalLight);
+
+            // Hemisphere light for more natural lighting
+            const hemisphereLight = new THREE.HemisphereLight(0x87ceeb, 0x2d5016, 0.4);
+            scene.add(hemisphereLight);
+
+            // Fog
+            scene.fog = new THREE.FogExp2(modes[0].fogColor, modes[0].fogDensity);
+            scene.background = new THREE.Color(modes[0].fogColor);
+
+            camera.position.set(0, 1.6, 5);
+
+            // Mode switching
+            window.switchMode = function(idx) {
+                currentMode = idx;
+                const mode = modes[idx];
+                
+                document.querySelectorAll('.mode-btn').forEach((btn, i) => {
+                    btn.classList.toggle('active', i === idx);
+                });
+                
+                document.getElementById('risk-list').innerHTML = mode.risks
+                    .map(r => `<div class="risk-item">${r}</div>`).join('');
+                
+                scene.fog.color.setHex(mode.fogColor);
+                scene.fog.density = mode.fogDensity;
+                scene.background.setHex(mode.fogColor);
+                ambientLight.color.setHex(mode.ambientColor);
+                ambientLight.intensity = mode.ambientIntensity;
+                
+                // Handle bat sounds
+                if (idx === 2) {
+                    startBatSounds();
+                } else {
+                    stopBatSounds();
+                    echoWaves.forEach(w => {
+                        w.userData.active = false;
+                        w.material.opacity = 0;
+                    });
+                }
+                
+                // Reset everything first
+                treeCanopies.forEach(c => {
+                    c.material.color.setHex(0x228B22);
+                    c.material.emissive.setHex(0x000000);
+                    c.material.emissiveIntensity = 0;
+                });
+                flowers.forEach(f => {
+                    f.material.emissive.setHex(0x000000);
+                    f.material.emissiveIntensity = 0;
+                });
+                flowerCenters.forEach(fc => {
+                    fc.material.emissiveIntensity = 0;
+                });
+                rocks.forEach(r => {
+                    r.material.emissive.setHex(0x000000);
+                    r.material.emissiveIntensity = 0;
+                });
+                deadZones.forEach(dz => dz.material.opacity = 0);
+                roads.forEach(r => r.material.emissiveIntensity = 0);
+                loggingEquipment.forEach(le => le.visible = false);
+                windTurbines.forEach(wt => {
+                    wt.visible = false;
+                    wt.material.emissiveIntensity = 0;
+                });
+                scentParticles.forEach(sp => sp.material.opacity = 0);
+                nectarGuides.forEach(ng => ng.material.opacity = 0);
+                pollenParticles.forEach(pp => pp.material.opacity = 0);
+                heatMap.forEach(h => h.material.opacity = 0);
+                coldZones.forEach(cz => cz.material.opacity = 0);
+                animals.forEach(a => {
+                    a.material.emissive.setHex(0x000000);
+                    a.material.emissiveIntensity = 0;
+                });
+                
+                // Mode-specific visuals
+                if (idx === 0) { // Human
+                    loggingEquipment.forEach(le => le.visible = true);
+                    
+                } else if (idx === 1) { // Bee UV
+                    treeCanopies.forEach(c => {
+                        c.material.color.setHex(0x9370DB);
+                    });
+                    flowers.forEach(f => {
+                        f.material.emissive.setHex(0xFF1493);
+                        f.material.emissiveIntensity = 0.5;
+                    });
+                    flowerCenters.forEach(fc => {
+                        fc.material.emissiveIntensity = 2;
+                    });
+                    nectarGuides.forEach(ng => {
+                        ng.material.opacity = 0.8;
+                    });
+                    pollenParticles.forEach(pp => {
+                        pp.material.opacity = 0.7;
+                    });
+                    deadZones.forEach(dz => dz.material.opacity = 0.6);
+                    
+                } else if (idx === 2) { // Bat Echolocation
+                    treeCanopies.forEach(c => {
+                        c.material.color.setHex(0x1a1a2e);
+                    });
+                    rocks.forEach(r => {
+                        r.material.emissive.setHex(0x00aaff);
+                        r.material.emissiveIntensity = 1.5;
+                    });
+                    windTurbines.forEach(wt => {
+                        wt.visible = true;
+                        wt.material.emissive.setHex(0xff0000);
+                        wt.material.emissiveIntensity = 1;
+                    });
+                    
+                } else if (idx === 3) { // Snake Infrared
+                    treeCanopies.forEach(c => {
+                        c.material.color.setHex(0x0a0a1a);
+                    });
+                    roads.forEach(r => {
+                        r.material.emissive.setHex(0x0000ff);
+                        r.material.emissiveIntensity = 0.8;
+                    });
+                    animals.forEach(a => {
+                        a.material.emissive.setHex(0xff4500);
+                        a.material.emissiveIntensity = 2;
+                    });
+                    heatMap.forEach(h => {
+                        h.material.opacity = 0.3;
+                    });
+                    coldZones.forEach(cz => {
+                        cz.material.opacity = 0.4;
+                    });
+                    
+                } else if (idx === 4) { // Dog Olfactory
+                    treeCanopies.forEach(c => {
+                        c.material.color.setHex(0x4a5568);
+                    });
+                    scentParticles.forEach(sp => {
+                        sp.material.opacity = 0.6;
+                    });
+                    roads.forEach(r => {
+                        r.material.emissive.setHex(0x666666);
+                        r.material.emissiveIntensity = 0.3;
+                    });
+                }
+            };
+
+            // Animation
+            let time = 0;
+            function animate() {
+                requestAnimationFrame(animate);
+                time += 0.01;
+                
+                // Camera movement
+                camera.rotation.y = rotationY;
+                camera.rotation.x = rotationX;
+                
+                // WASD movement relative to camera direction
+                const speed = 0.15;
+                const direction = new THREE.Vector3();
+                const right = new THREE.Vector3();
+                
+                direction.set(
+                    -Math.sin(rotationY),
+                    0,
+                    -Math.cos(rotationY)
+                ).normalize();
+                
+                right.set(
+                    -Math.sin(rotationY - Math.PI / 2),
+                    0,
+                    -Math.cos(rotationY - Math.PI / 2)
+                ).normalize();
+                
+                if (keys['KeyW']) {
+                    camera.position.x += direction.x * speed;
+                    camera.position.z += direction.z * speed;
+                }
+                if (keys['KeyS']) {
+                    camera.position.x -= direction.x * speed;
+                    camera.position.z -= direction.z * speed;
+                }
+                if (keys['KeyA']) {
+                    camera.position.x -= right.x * speed;
+                    camera.position.z -= right.z * speed;
+                }
+                if (keys['KeyD']) {
+                    camera.position.x += right.x * speed;
+                    camera.position.z += right.z * speed;
+                }
+                
+                camera.position.y = 1.6;
+                
+                // Animate flowers pulsing in bee mode
+                if (currentMode === 1) {
+                    flowers.forEach((f, i) => {
+                        f.material.emissiveIntensity = 0.3 + Math.sin(time * 2 + i) * 0.2;
+                    });
+                    nectarGuides.forEach((ng, i) => {
+                        ng.material.opacity = 0.6 + Math.sin(time * 3 + i * 0.3) * 0.3;
+                    });
+                    // Floating pollen
+                    pollenParticles.forEach(pp => {
+                        pp.position.x += pp.userData.drift.x;
+                        pp.position.y += pp.userData.drift.y * Math.sin(time + pp.position.x);
+                        pp.position.z += pp.userData.drift.z;
+                        
+                        if (pp.position.y > 8) pp.position.y = 0.5;
+                        if (pp.position.y < 0.5) pp.position.y = 8;
+                        if (Math.abs(pp.position.x) > 140) pp.userData.drift.x *= -1;
+                        if (Math.abs(pp.position.z) > 140) pp.userData.drift.z *= -1;
+                    });
+                }
+                
+                // Animate echolocation pulses in bat mode
+                if (currentMode === 2) {
+                    rocks.forEach((r, i) => {
+                        r.material.emissiveIntensity = 1 + Math.sin(time * 3 + i * 0.5) * 0.5;
+                    });
+                    
+                    // Animate echolocation waves
+                    echoWaves.forEach(wave => {
+                        if (wave.userData.active) {
+                            wave.userData.scale += 0.5;
+                            const scale = wave.userData.scale;
+                            wave.scale.set(scale, scale, scale);
+                            
+                            // Fade out as wave expands
+                            wave.material.opacity = Math.max(0, 0.8 - (scale / 50));
+                            
+                            // Deactivate when too large
+                            if (scale > 40) {
+                                wave.userData.active = false;
+                                wave.material.opacity = 0;
+                            }
+                        }
+                    });
+                }
+                
+                // Animate scent particles in dog mode
+                if (currentMode === 4) {
+                    scentParticles.forEach(sp => {
+                        sp.position.x += sp.userData.velocity.x;
+                        sp.position.y += sp.userData.velocity.y;
+                        sp.position.z += sp.userData.velocity.z;
+                        
+                        if (sp.position.y > 6) sp.position.y = 0.5;
+                        if (Math.abs(sp.position.x) > 140) sp.userData.velocity.x *= -1;
+                        if (Math.abs(sp.position.z) > 140) sp.userData.velocity.z *= -1;
+                    });
+                }
+                
+                // Animate heat signatures in snake mode
+                if (currentMode === 3) {
+                    heatMap.forEach((h, i) => {
+                        const pulse = Math.sin(time * 2 + h.userData.pulseOffset) * 0.5 + 0.5;
+                        h.material.opacity = pulse * 0.4;
+                        h.scale.set(1 + pulse * 0.3, 1 + pulse * 0.3, 1 + pulse * 0.3);
+                    });
+                    coldZones.forEach((cz, i) => {
+                        cz.material.opacity = 0.3 + Math.sin(time + i) * 0.1;
+                    });
+                }
+                
+                // Animate animals
+                animals.forEach(a => {
+                    a.userData.moveAngle += 0.02;
+                    a.position.x += Math.cos(a.userData.moveAngle) * 0.05;
+                    a.position.z += Math.sin(a.userData.moveAngle) * 0.05;
+                });
+                
+                // Animate clouds
+                clouds.forEach(cloud => {
+                    cloud.position.x += cloud.userData.velocity.x;
+                    cloud.position.z += cloud.userData.velocity.z;
+                    
+                    // Wrap around
+                    if (Math.abs(cloud.position.x) > 250) cloud.userData.velocity.x *= -1;
+                    if (Math.abs(cloud.position.z) > 250) cloud.userData.velocity.z *= -1;
+                });
+                
+                // Weather system
+                weatherTimer += 0.01;
+                
+                // Randomly trigger rain
+                if (!isRaining && Math.random() < 0.001) {
+                    isRaining = true;
+                }
+                
+                // Rain logic
+                if (isRaining) {
+                    rainIntensity = Math.min(rainIntensity + 0.02, 0.8);
+                    rainMaterial.opacity = rainIntensity;
+                    
+                    // Animate raindrops
+                    const positions = rain.geometry.attributes.position.array;
+                    for (let i = 0; i < positions.length; i += 3) {
+                        positions[i + 1] -= 2; // Fall speed
+                        
+                        // Reset raindrop when it hits ground
+                        if (positions[i + 1] < 0) {
+                            positions[i] = camera.position.x + (Math.random() - 0.5) * 200;
+                            positions[i + 1] = 100;
+                            positions[i + 2] = camera.position.z + (Math.random() - 0.5) * 200;
+                        }
+                    }
+                    rain.geometry.attributes.position.needsUpdate = true;
+                    
+                    // Darken scene during rain
+                    directionalLight.intensity = 0.5;
+                    
+                    // Stop rain after random duration
+                    if (Math.random() < 0.002) {
+                        isRaining = false;
+                    }
+                } else {
+                    rainIntensity = Math.max(rainIntensity - 0.01, 0);
+                    rainMaterial.opacity = rainIntensity;
+                    directionalLight.intensity = 1.0;
+                }
+                
+                // Sway grass in wind
+                grassPatches.forEach((grass, i) => {
+                    grass.rotation.z = Math.sin(time * 2 + i * 0.5) * 0.1;
+                });
+                
+                renderer.render(scene, camera);
+            }
+
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+
+            switchMode(0);
+            animate();
+        }
+
+        // Start initialization
+        init();
+    </script>
+</body>
+</html>
