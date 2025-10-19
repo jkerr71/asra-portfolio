@@ -391,38 +391,51 @@
         resizeCanvas();
         window.addEventListener('resize', resizeCanvas);
         
+        // Get viewport dimensions
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        
+        // Scale positions to viewport (originally designed for ~900x800)
+        function scaleX(x) {
+            return (x / 900) * (viewportWidth - 400) + 100;
+        }
+        
+        function scaleY(y) {
+            return (y / 800) * (viewportHeight - 200) + 100;
+        }
+        
         // Earth Systems Data
         const systems = [
             // Ocean
-            { id: 'amoc', name: 'Atlantic Circulation', type: 'ocean', x: 250, y: 350, critical: true, description: 'AMOC collapse would dramatically alter Northern Hemisphere climate patterns' },
-            { id: 'coral', name: 'Coral Reef Systems', type: 'ocean', x: 700, y: 450, critical: true, description: 'Coral reefs support 25% of marine biodiversity despite covering <1% of ocean' },
-            { id: 'fisheries', name: 'Marine Fisheries', type: 'ocean', x: 600, y: 550, description: 'Critical protein source for 3 billion people' },
-            { id: 'oxygen', name: 'Ocean Oxygen Zones', type: 'ocean', x: 400, y: 500, description: 'Expanding dead zones threaten marine life' },
+            { id: 'amoc', name: 'Atlantic Circulation', type: 'ocean', x: scaleX(250), y: scaleY(350), critical: true, description: 'AMOC collapse would dramatically alter Northern Hemisphere climate patterns' },
+            { id: 'coral', name: 'Coral Reef Systems', type: 'ocean', x: scaleX(700), y: scaleY(450), critical: true, description: 'Coral reefs support 25% of marine biodiversity despite covering <1% of ocean' },
+            { id: 'fisheries', name: 'Marine Fisheries', type: 'ocean', x: scaleX(600), y: scaleY(550), description: 'Critical protein source for 3 billion people' },
+            { id: 'oxygen', name: 'Ocean Oxygen Zones', type: 'ocean', x: scaleX(400), y: scaleY(500), description: 'Expanding dead zones threaten marine life' },
             
             // Ice
-            { id: 'greenland', name: 'Greenland Ice Sheet', type: 'ice', x: 300, y: 150, critical: true, description: '7 meters of sea level rise if fully melted' },
-            { id: 'antarctica', name: 'West Antarctic Ice', type: 'ice', x: 500, y: 700, critical: true, description: '3+ meters sea level rise potential' },
-            { id: 'arctic', name: 'Arctic Sea Ice', type: 'ice', x: 400, y: 200, description: 'Albedo feedback accelerates warming' },
-            { id: 'permafrost', name: 'Permafrost Carbon', type: 'ice', x: 550, y: 180, critical: true, description: '1.5 trillion tons of carbon at risk' },
+            { id: 'greenland', name: 'Greenland Ice Sheet', type: 'ice', x: scaleX(300), y: scaleY(150), critical: true, description: '7 meters of sea level rise if fully melted' },
+            { id: 'antarctica', name: 'West Antarctic Ice', type: 'ice', x: scaleX(500), y: scaleY(700), critical: true, description: '3+ meters sea level rise potential' },
+            { id: 'arctic', name: 'Arctic Sea Ice', type: 'ice', x: scaleX(400), y: scaleY(200), description: 'Albedo feedback accelerates warming' },
+            { id: 'permafrost', name: 'Permafrost Carbon', type: 'ice', x: scaleX(550), y: scaleY(180), critical: true, description: '1.5 trillion tons of carbon at risk' },
             
             // Terrestrial
-            { id: 'amazon', name: 'Amazon Rainforest', type: 'terrestrial', x: 200, y: 500, critical: true, description: 'Approaching savannization tipping point' },
-            { id: 'boreal', name: 'Boreal Forests', type: 'terrestrial', x: 350, y: 250, description: 'Largest terrestrial carbon sink' },
-            { id: 'soil', name: 'Soil Carbon Stores', type: 'terrestrial', x: 300, y: 400, description: 'Holds 3x more carbon than atmosphere' },
-            { id: 'wetlands', name: 'Wetland Systems', type: 'terrestrial', x: 500, y: 400, description: 'Critical methane regulation' },
+            { id: 'amazon', name: 'Amazon Rainforest', type: 'terrestrial', x: scaleX(200), y: scaleY(500), critical: true, description: 'Approaching savannization tipping point' },
+            { id: 'boreal', name: 'Boreal Forests', type: 'terrestrial', x: scaleX(350), y: scaleY(250), description: 'Largest terrestrial carbon sink' },
+            { id: 'soil', name: 'Soil Carbon Stores', type: 'terrestrial', x: scaleX(300), y: scaleY(400), description: 'Holds 3x more carbon than atmosphere' },
+            { id: 'wetlands', name: 'Wetland Systems', type: 'terrestrial', x: scaleX(500), y: scaleY(400), description: 'Critical methane regulation' },
             
             // Atmospheric
-            { id: 'monsoon', name: 'Indian Monsoon', type: 'atmospheric', x: 800, y: 350, description: 'Feeds 1 billion people' },
-            { id: 'jet', name: 'Jet Stream', type: 'atmospheric', x: 600, y: 200, description: 'Governs Northern Hemisphere weather' },
-            { id: 'enso', name: 'ENSO System', type: 'atmospheric', x: 750, y: 550, description: 'Global climate regulator' },
+            { id: 'monsoon', name: 'Indian Monsoon', type: 'atmospheric', x: scaleX(800), y: scaleY(350), description: 'Feeds 1 billion people' },
+            { id: 'jet', name: 'Jet Stream', type: 'atmospheric', x: scaleX(600), y: scaleY(200), description: 'Governs Northern Hemisphere weather' },
+            { id: 'enso', name: 'ENSO System', type: 'atmospheric', x: scaleX(750), y: scaleY(550), description: 'Global climate regulator' },
             
             // Food
-            { id: 'breadbasket', name: 'Global Breadbaskets', type: 'food', x: 550, y: 300, description: 'Major grain-producing regions' },
-            { id: 'pollinators', name: 'Pollinator Networks', type: 'food', x: 400, y: 350, description: '75% of crops depend on pollination' },
+            { id: 'breadbasket', name: 'Global Breadbaskets', type: 'food', x: scaleX(550), y: scaleY(300), description: 'Major grain-producing regions' },
+            { id: 'pollinators', name: 'Pollinator Networks', type: 'food', x: scaleX(400), y: scaleY(350), description: '75% of crops depend on pollination' },
             
             // Human (peripheral)
-            { id: 'coastal', name: 'Coastal Megacities', type: 'human', x: 650, y: 650, description: '40% of humanity lives near coasts' },
-            { id: 'migration', name: 'Climate Migration', type: 'human', x: 800, y: 600, description: 'Projected 1+ billion climate migrants by 2050' }
+            { id: 'coastal', name: 'Coastal Megacities', type: 'human', x: scaleX(650), y: scaleY(650), description: '40% of humanity lives near coasts' },
+            { id: 'migration', name: 'Climate Migration', type: 'human', x: scaleX(800), y: scaleY(600), description: 'Projected 1+ billion climate migrants by 2050' }
         ];
         
         const links = [
@@ -586,4 +599,200 @@
             
             document.getElementById('systems-intact').textContent = intact;
             document.getElementById('systems-collapsed').textContent = collapsed;
-            document.
+            document.getElementById('cascade-strength').textContent = cascadeRisk + '%';
+            document.getElementById('tipping-points').textContent = tippingPoints;
+        }
+        
+        function showInfo(system) {
+            selectedSystem = system.id;
+            document.getElementById('info-name').textContent = system.name;
+            
+            const typeSpan = document.getElementById('info-type');
+            typeSpan.textContent = system.type;
+            typeSpan.className = 'system-type';
+            if (system.critical) {
+                typeSpan.classList.add('critical-badge');
+                typeSpan.textContent += ' • TIPPING POINT';
+            }
+            
+            document.getElementById('info-description').textContent = system.description;
+            
+            // Show connections
+            const connectionsList = document.getElementById('info-connections');
+            connectionsList.innerHTML = '';
+            
+            const outgoing = links.filter(l => l.source === system.id);
+            const incoming = links.filter(l => l.target === system.id);
+            
+            outgoing.forEach(link => {
+                const target = systems.find(s => s.id === link.target);
+                const li = document.createElement('li');
+                if (link.strength === 'critical') li.className = 'critical';
+                li.textContent = `→ ${target.name} (${link.strength})`;
+                connectionsList.appendChild(li);
+            });
+            
+            incoming.forEach(link => {
+                const source = systems.find(s => s.id === link.source);
+                const li = document.createElement('li');
+                if (link.strength === 'critical') li.className = 'critical';
+                li.textContent = `← ${source.name} (${link.strength})`;
+                connectionsList.appendChild(li);
+            });
+            
+            document.getElementById('info-panel').classList.add('show');
+        }
+        
+        // Mouse events
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            let clicked = null;
+            systems.forEach(system => {
+                const distance = Math.sqrt((x - system.x) ** 2 + (y - system.y) ** 2);
+                if (distance < 20) {
+                    clicked = system;
+                }
+            });
+            
+            if (clicked) {
+                if (collapsedSystems.has(clicked.id)) {
+                    // Reset this system
+                    collapsedSystems.delete(clicked.id);
+                } else {
+                    // Collapse and cascade
+                    const cascade = calculateCascade(clicked.id);
+                    cascade.forEach(id => collapsedSystems.add(id));
+                }
+                showInfo(clicked);
+                updateStats();
+            }
+        });
+        
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            let found = null;
+            systems.forEach(system => {
+                const distance = Math.sqrt((x - system.x) ** 2 + (y - system.y) ** 2);
+                if (distance < 20) {
+                    found = system.id;
+                }
+            });
+            
+            hoveredSystem = found;
+            canvas.style.cursor = found ? 'pointer' : 'default';
+        });
+        
+        // Stressor effects
+        const stressorEffects = {
+            warming: ['coral', 'arctic', 'greenland', 'permafrost', 'amazon'],
+            fishing: ['fisheries', 'coral', 'oxygen'],
+            deforestation: ['amazon', 'boreal', 'soil'],
+            pollution: ['coral', 'oxygen', 'fisheries'],
+            agriculture: ['pollinators', 'soil', 'wetlands']
+        };
+        
+        function toggleStressor(stressor) {
+            const btn = document.querySelector(`[data-stressor="${stressor}"]`);
+            
+            if (activeStressors.has(stressor)) {
+                activeStressors.delete(stressor);
+                btn.classList.remove('active');
+                
+                // Remove effects
+                stressorEffects[stressor].forEach(systemId => {
+                    collapsedSystems.delete(systemId);
+                });
+            } else {
+                activeStressors.add(stressor);
+                btn.classList.add('active');
+                
+                // Apply effects
+                stressorEffects[stressor].forEach(systemId => {
+                    const cascade = calculateCascade(systemId);
+                    cascade.forEach(id => collapsedSystems.add(id));
+                });
+            }
+            
+            updateStats();
+        }
+        
+        function loadScenario(scenario) {
+            // Clear active scenario buttons
+            document.querySelectorAll('.scenario-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Clear all
+            collapsedSystems.clear();
+            activeStressors.clear();
+            document.querySelectorAll('.stressor-btn').forEach(btn => btn.classList.remove('active'));
+            
+            if (scenario === 'pristine') {
+                // Nothing collapsed
+            } else if (scenario === 'current') {
+                // Minor degradation
+                collapsedSystems.add('coral');
+                collapsedSystems.add('arctic');
+                
+                activeStressors.add('warming');
+                activeStressors.add('fishing');
+                document.querySelector('[data-stressor="warming"]').classList.add('active');
+                document.querySelector('[data-stressor="fishing"]').classList.add('active');
+            } else if (scenario === '1.5C') {
+                // Moderate collapse
+                ['coral', 'arctic', 'fisheries', 'pollinators'].forEach(id => {
+                    const cascade = calculateCascade(id);
+                    cascade.forEach(cid => collapsedSystems.add(cid));
+                });
+                
+                activeStressors.add('warming');
+                activeStressors.add('fishing');
+                activeStressors.add('deforestation');
+                document.querySelector('[data-stressor="warming"]').classList.add('active');
+                document.querySelector('[data-stressor="fishing"]').classList.add('active');
+                document.querySelector('[data-stressor="deforestation"]').classList.add('active');
+            } else if (scenario === '3C') {
+                // Catastrophic cascade
+                ['greenland', 'antarctica', 'permafrost', 'amazon', 'coral'].forEach(id => {
+                    const cascade = calculateCascade(id);
+                    cascade.forEach(cid => collapsedSystems.add(cid));
+                });
+                
+                ['warming', 'fishing', 'deforestation', 'pollution', 'agriculture'].forEach(s => {
+                    activeStressors.add(s);
+                    document.querySelector(`[data-stressor="${s}"]`).classList.add('active');
+                });
+            }
+            
+            updateStats();
+        }
+        
+        function resetAll() {
+            collapsedSystems.clear();
+            activeStressors.clear();
+            selectedSystem = null;
+            
+            document.querySelectorAll('.stressor-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.scenario-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelector('.scenario-btn').classList.add('active');
+            document.getElementById('info-panel').classList.remove('show');
+            
+            updateStats();
+        }
+        
+        // Animation loop
+        function animate() {
+            draw();
+            requestAnimationFrame(animate);
+        }
+        
+        animate();
+        updateStats();
+    </script>
+</body>
+</html>
